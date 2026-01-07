@@ -1,0 +1,446 @@
+/* Estilos responsivos globales */
+:root {
+  --bs-body-font-size: 0.875rem;
+  
+  /* Tema oscuro personalizado */
+  --bg-primary: #1a1d23;
+  --bg-secondary: #23272b;
+  --bg-card: #2c3136;
+  --bg-card-hover: #353a40;
+  --bg-input: #1e2226;
+  --bg-input-focus: #25292e;
+  --text-primary: #e9ecef;
+  --text-secondary: #adb5bd;
+  --text-muted: #6c757d;
+  --border-color: #3d4146;
+  --accent-primary: #0dcaf0;
+  --accent-success: #198754;
+  --accent-warning: #ffc107;
+  --accent-danger: #dc3545;
+}
+
+/* Fondo oscuro para el body */
+body {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Mejoras de responsividad para tablas */
+@media (max-width: 768px) {
+  .table-responsive {
+    font-size: 0.85rem;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.5rem 0.25rem;
+    white-space: nowrap;
+  }
+  
+  /* Botones en tablas móviles */
+  .table .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Mejoras para formularios en móviles */
+@media (max-width: 576px) {
+  .form-label {
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .form-control,
+  .form-select {
+    font-size: 0.875rem;
+    padding: 0.5rem;
+  }
+  
+  .card {
+    border-radius: 0.5rem;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+}
+
+/* Mejoras para gráficos responsivos */
+@media (max-width: 768px) {
+  .recharts-wrapper {
+    max-width: 100%;
+  }
+}
+
+/* Ajustes de espaciado para móviles */
+@media (max-width: 576px) {
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  .mb-3,
+  .mb-4 {
+    margin-bottom: 1rem !important;
+  }
+  
+  .mt-3,
+  .mt-4 {
+    margin-top: 1rem !important;
+  }
+}
+
+/* Mejoras para paginación en móviles */
+@media (max-width: 576px) {
+  .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .pagination .page-link {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Mejoras para cards de estadísticas */
+@media (max-width: 576px) {
+  .card h4,
+  .card h5,
+  .card h6 {
+    font-size: 1rem;
+  }
+}
+
+/* Ajustes para navbar fijo */
+.navbar.fixed-top {
+  z-index: 1030;
+  padding: 0.75rem 0;
+}
+
+/* Mejoras del navbar en desktop */
+@media (min-width: 768px) {
+  .navbar {
+    padding: 0.5rem 0;
+  }
+  
+  .navbar-brand {
+    font-size: 1.25rem;
+    margin-right: 2rem;
+    padding: 0.5rem 0;
+  }
+  
+  .navbar-nav {
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .navbar-nav .nav-link {
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    font-size: 0.95rem;
+  }
+  
+  .navbar-collapse {
+    display: flex !important;
+    flex-basis: auto;
+    flex-grow: 1;
+    align-items: center;
+  }
+  
+  .navbar-toggler {
+    display: none;
+  }
+}
+
+/* Espaciado para contenido principal cuando hay navbar fijo */
+.main-content {
+  padding-top: 120px !important;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 140px !important;
+  }
+  
+  .navbar-brand {
+    font-size: 1rem;
+  }
+  
+  .navbar-nav {
+    text-align: center;
+  }
+  
+  .navbar-nav .nav-link {
+    padding: 0.5rem 1rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .main-content {
+    padding-top: 80px !important;
+  }
+  
+  .navbar {
+    padding: 0.75rem 0;
+  }
+  
+  .navbar-nav .nav-link {
+    padding: 0.5rem 1.25rem;
+    font-size: 1rem;
+  }
+}
+
+/* Mejoras para botones en móviles */
+@media (max-width: 576px) {
+  .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  .btn-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .btn-lg {
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+  }
+}
+
+/* Scroll horizontal suave para tablas */
+.table-responsive {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* Mejoras de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Estilos para tarjetas con tema oscuro */
+.card {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.card.bg-light {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Estilos para formularios */
+.form-control,
+.form-select {
+  background-color: var(--bg-input) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--bg-input-focus) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 0 0 0.25rem rgba(13, 202, 240, 0.25) !important;
+}
+
+.form-control::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.form-label {
+  color: var(--text-secondary) !important;
+}
+
+.form-text {
+  color: var(--text-muted) !important;
+}
+
+/* Estilos para tablas */
+.table {
+  color: var(--text-primary) !important;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > td {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.table-bordered {
+  border-color: var(--border-color) !important;
+}
+
+.table-bordered > :not(caption) > * {
+  border-color: var(--border-color) !important;
+}
+
+.table-hover > tbody > tr:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary) !important;
+}
+
+.table > :not(caption) > * > * {
+  border-color: var(--border-color) !important;
+}
+
+/* Estilos para badges */
+.badge {
+  color: #fff !important;
+}
+
+/* Estilos para alerts */
+.alert {
+  border-color: var(--border-color) !important;
+}
+
+.alert-warning {
+  background-color: rgba(255, 193, 7, 0.15) !important;
+  color: var(--accent-warning) !important;
+  border-color: rgba(255, 193, 7, 0.3) !important;
+}
+
+.alert-success {
+  background-color: rgba(25, 135, 84, 0.15) !important;
+  color: var(--accent-success) !important;
+  border-color: rgba(25, 135, 84, 0.3) !important;
+}
+
+.alert-danger {
+  background-color: rgba(220, 53, 69, 0.15) !important;
+  color: var(--accent-danger) !important;
+  border-color: rgba(220, 53, 69, 0.3) !important;
+}
+
+/* Estilos para paginación */
+.page-link {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.page-link:hover {
+  background-color: var(--bg-card-hover) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+}
+
+.page-item.active .page-link {
+  background-color: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+.page-item.disabled .page-link {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-muted) !important;
+}
+
+/* Input group */
+.input-group-text {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Checkbox y radio buttons */
+.form-check-input {
+  background-color: var(--bg-input) !important;
+  border-color: var(--border-color) !important;
+}
+
+.form-check-input:checked {
+  background-color: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+.form-check-label {
+  color: var(--text-secondary) !important;
+}
+
+/* Text muted */
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Títulos y encabezados */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary) !important;
+}
+
+/* Container principal */
+.container-fluid {
+  background-color: var(--bg-primary) !important;
+}
+
+/* Mejoras para el select option */
+.form-select option {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Mejoras para datalist */
+datalist {
+  background-color: var(--bg-card) !important;
+}
+
+/* Scrollbar personalizado para tema oscuro */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+/* Estilos para SweetAlert2 - Título en negro */
+.swal2-title {
+  color: #000000 !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* Mejoras para imágenes en tablas */
+.table img {
+  border-radius: 4px;
+}
+
+/* Estilos para el texto de ayuda */
+small.text-muted {
+  opacity: 0.8;
+}
+
+/* Mejoras para los badges de stock */
+.badge.bg-success {
+  background-color: var(--accent-success) !important;
+}
+
+.badge.bg-warning {
+  background-color: var(--accent-warning) !important;
+  color: #000 !important;
+}
+
+.badge.bg-danger {
+  background-color: var(--accent-danger) !important;
+}
+
+.badge.bg-info {
+  background-color: var(--accent-primary) !important;
+}
+

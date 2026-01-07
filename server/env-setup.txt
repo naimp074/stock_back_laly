@@ -1,0 +1,21 @@
+# INSTRUCCIONES: Copia este contenido en un archivo llamado .env en la carpeta server/
+
+# Puerto del servidor
+PORT=3000
+
+# MongoDB Connection String (Atlas)
+MONGODB_URI=mongodb+srv://naimpaz274_db_user:xsjmqJw4s0tT2mDA@cluster0.c4xqe3a.mongodb.net/miapp?appName=Cluster0
+
+# JWT Secret (cambiar en producción)
+JWT_SECRET=tu_secreto_super_seguro_aqui_cambiar_en_produccion
+
+# CORS Origins (separados por comas)
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+
+
+
+
+
+
+
+
