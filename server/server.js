@@ -92,13 +92,17 @@ app.get('/api/health', (req, res) => {
   try {
     const dbStatus = mongoose.connection.readyState === 1 ? 'conectado' : 'desconectado';
     const hasMongoUri = !!process.env.MONGODB_URI;
+    const hasJwtSecret = !!process.env.JWT_SECRET;
     
     res.status(200).json({
       success: true,
       message: 'API funcionando correctamente',
       timestamp: new Date().toISOString(),
       database: dbStatus,
-      hasMongoUri: hasMongoUri,
+      variables: {
+        MONGODB_URI: hasMongoUri ? 'configurada' : 'NO configurada',
+        JWT_SECRET: hasJwtSecret ? 'configurada' : 'NO configurada'
+      },
       environment: process.env.NODE_ENV || 'development',
       vercel: !!process.env.VERCEL,
       ...(dbError && { dbError: dbError.message })

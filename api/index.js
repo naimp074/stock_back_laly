@@ -79,8 +79,43 @@ export default async function handler(req, res) {
     }
     
     // Ejecutar Express
-    // Express manejará las rutas y enviará la respuesta
-    expressApp(req, res);
+    // En serverless, necesitamos asegurarnos de que Express envíe la respuesta
+    // Wrapper para asegurar que siempre se envíe una respuesta
+    return new Promise((resolve) => {
+      // Interceptar cuando Express termine de enviar la respuesta
+      const originalEnd = res.end.bind(res);
+      res.end = function(...args) {
+        originalEnd.apply(this, args);
+        resolve();
+      };
+      
+      // Ejecutar Express
+      expressApp(req, res, (err) => {
+        if (err) {
+          console.error('Error en Express middleware:', err);
+          if (!res.headersSent) {
+            sendJSON(500, {
+              success: false,
+              message: 'Error procesando request',
+              error: process.env.VERCEL_ENV !== 'production' ? err.message : undefined
+            });
+          }
+          resolve();
+        }
+      });
+      
+      // Timeout de seguridad (10 segundos)
+      setTimeout(() => {
+        if (!res.headersSent) {
+          console.warn('Timeout: Express no respondió en 10 segundos');
+          sendJSON(504, {
+            success: false,
+            message: 'Timeout: El servidor tardó demasiado en responder'
+          });
+          resolve();
+        }
+      }, 10000);
+    });
     
   } catch (error) {
     console.error('❌ Error en función serverless:', error);
