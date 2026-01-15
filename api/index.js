@@ -111,123 +111,162 @@ export default async function handler(req, res) {
     // Ejecutar Express
     // Usar Promise para manejar la respuesta asíncrona
     return new Promise((resolve) => {
-      let responseSent = false;
+      let responseCompleted = false;
+      let responseStarted = false;
       
-      // Interceptar res.end para saber cuándo termina - ESTE ES EL MOMENTO CRÍTICO
+      // Función para resolver la Promise de forma segura
+      const safeResolve = (source) => {
+        if (!responseCompleted) {
+          responseCompleted = true;
+          console.log(`✅ [Vercel] Promise resuelto desde: ${source}`);
+          // Usar setImmediate para asegurar que todos los I/O pendientes se completen
+          setImmediate(() => {
+            resolve();
+          });
+        }
+      };
+      
+      // Verificación periódica como respaldo adicional
+      // Esto verifica cada 100ms si los headers se enviaron
+      const checkInterval = setInterval(() => {
+        if (res.headersSent && !responseCompleted) {
+          console.log(`✅ [Vercel] Headers enviados detectados por verificación periódica`);
+          clearInterval(checkInterval);
+          safeResolve('periodic check');
+        }
+      }, 100);
+      
+      // Función wrapper para limpiar el intervalo cuando se resuelve
+      const safeResolveWithCleanup = (source) => {
+        clearInterval(checkInterval);
+        safeResolve(source);
+      };
+      
+      // Interceptar res.end - este es el punto crítico donde Express termina la respuesta
       const originalEnd = res.end.bind(res);
       res.end = function(...args) {
-        console.log(`📤 [Vercel] res.end llamado - respuesta completa`);
-        if (!responseSent) {
-          responseSent = true;
-          try {
-            originalEnd.apply(this, args);
-          } finally {
-            // Resolver el Promise DESPUÉS de que se envíe la respuesta
-            process.nextTick(() => {
-              console.log(`✅ [Vercel] Promise resuelto - respuesta enviada`);
-              resolve();
-            });
-          }
-        } else {
-          resolve();
-        }
+        console.log(`📤 [Vercel] res.end llamado`);
+        const result = originalEnd.apply(this, args);
+        
+        // En Vercel serverless, después de res.end() la respuesta está enviada
+        // Usar setImmediate para resolver después de que todos los I/O pendientes se completen
+        setImmediate(() => {
+          safeResolveWithCleanup('res.end');
+        });
+        
+        return result;
       };
       
-      // Interceptar res.json - debe asegurar que res.end se llame
+      // Interceptar res.json - Express usa esto frecuentemente
       const originalJson = res.json.bind(res);
       res.json = function(data) {
-        console.log(`📤 [Vercel] res.json llamado con:`, typeof data === 'object' ? JSON.stringify(data).substring(0, 100) : data);
-        if (!responseSent) {
-          responseSent = true;
-          try {
-            const result = originalJson(data);
-            // res.json internamente llama a res.end, así que el Promise se resolverá ahí
-            return result;
-          } catch (err) {
-            console.error('Error en res.json:', err);
-            // Si hay error, asegurar que res.end se llame para resolver el Promise
-            if (!res.headersSent) {
-              try {
-                res.status(500).end();
-              } catch (e) {
-                // Si falla, resolver el Promise de todas formas
-                process.nextTick(() => resolve());
-              }
-            }
-            throw err;
-          }
+        if (!responseStarted) {
+          responseStarted = true;
+          console.log(`📤 [Vercel] res.json llamado con:`, typeof data === 'object' ? JSON.stringify(data).substring(0, 100) : data);
         }
-        return this;
+        const result = originalJson.apply(this, arguments);
+        // res.json internamente llama a res.end, pero como respaldo adicional
+        // verificamos después de que los I/O pendientes se completen
+        setImmediate(() => {
+          if (res.headersSent && !responseCompleted) {
+            safeResolveWithCleanup('res.json');
+          }
+        });
+        return result;
       };
       
-      // Interceptar res.send también
+      // Interceptar res.send - otro método común de Express
       const originalSend = res.send.bind(res);
       res.send = function(data) {
-        console.log(`📤 [Vercel] res.send llamado`);
-        if (!responseSent) {
-          responseSent = true;
-          try {
-            const result = originalSend(data);
-            // res.send también llama a res.end internamente
-            return result;
-          } catch (err) {
-            console.error('Error en res.send:', err);
-            // Si hay error, asegurar que res.end se llame
-            if (!res.headersSent) {
-              try {
-                res.status(500).end();
-              } catch (e) {
-                process.nextTick(() => resolve());
-              }
-            }
-            throw err;
-          }
+        if (!responseStarted) {
+          responseStarted = true;
+          console.log(`📤 [Vercel] res.send llamado`);
         }
-        return this;
+        const result = originalSend.apply(this, arguments);
+        // res.send también llama a res.end internamente
+        setImmediate(() => {
+          if (res.headersSent && !responseCompleted) {
+            safeResolveWithCleanup('res.send');
+          }
+        });
+        return result;
       };
       
-      // Interceptar res.status también para logging
+      // Interceptar res.status para logging
       const originalStatus = res.status.bind(res);
       res.status = function(code) {
         console.log(`📤 [Vercel] res.status(${code}) llamado`);
-        return originalStatus(code);
+        return originalStatus.apply(this, arguments);
+      };
+      
+      // Usar eventos nativos como respaldo adicional
+      // Estos eventos pueden no estar disponibles en el objeto res de Vercel,
+      // pero los registramos por si acaso
+      if (typeof res.once === 'function') {
+        res.once('finish', () => {
+          console.log(`✅ [Vercel] Evento 'finish' disparado`);
+          safeResolveWithCleanup('event:finish');
+        });
+        
+        res.once('close', () => {
+          console.log(`✅ [Vercel] Evento 'close' disparado`);
+          safeResolveWithCleanup('event:close');
+        });
+      }
+      
+      // Manejar errores de Express
+      const onError = (error) => {
+        console.error('❌ [Vercel] Error en Express:', error);
+        if (!responseCompleted && !res.headersSent) {
+          try {
+            res.status(500).json({
+              success: false,
+              message: 'Error interno del servidor',
+              error: error.message
+            });
+          } catch (e) {
+            // Si no podemos enviar respuesta, al menos resolver el Promise
+            safeResolveWithCleanup('error handler');
+          }
+        } else if (!responseCompleted) {
+          safeResolveWithCleanup('error handler (headers already sent)');
+        }
       };
       
       // Ejecutar Express
       console.log(`🚀 [Vercel] Ejecutando Express para ${req.method} ${requestUrl}`);
-      expressApp(req, res);
       
-      // Verificar después de un tiempo si Express respondió
-      // Si no respondió, enviar un error
+      try {
+        expressApp(req, res);
+      } catch (error) {
+        onError(error);
+      }
+      
+      // Timeout de seguridad (10 segundos - aumentado para dar más tiempo)
       setTimeout(() => {
-        if (!responseSent) {
-          console.warn('⚠️ [Vercel] Express no envió respuesta después de 3 segundos');
+        clearInterval(checkInterval); // Limpiar el intervalo de verificación
+        if (!responseCompleted) {
+          console.warn('⚠️ [Vercel] Timeout: Express no completó la respuesta en 10 segundos');
           console.warn('URL solicitada:', requestUrl);
           console.warn('Method:', req.method);
           console.warn('Headers sent:', res.headersSent);
-          sendJSON(504, {
-            success: false,
-            message: 'Timeout: Express no respondió',
-            url: requestUrl,
-            hint: 'Verifica los logs en Vercel para más detalles'
-          });
-          resolve();
+          console.warn('Response started:', responseStarted);
+          
+          if (!res.headersSent) {
+            try {
+              sendJSON(504, {
+                success: false,
+                message: 'Timeout: El servidor tardó demasiado en responder',
+                url: requestUrl
+              });
+            } catch (e) {
+              console.error('Error enviando respuesta de timeout:', e);
+            }
+          }
+          
+          safeResolveWithCleanup('timeout');
         }
-      }, 3000);
-      
-      // Timeout de seguridad (reducido a 4 segundos para que coincida con el frontend)
-      setTimeout(() => {
-        if (!responseSent) {
-          console.warn('⚠️ [Vercel] Timeout: Express no respondió en 4 segundos');
-          sendJSON(504, {
-            success: false,
-            message: 'Timeout: El servidor tardó demasiado en responder',
-            url: requestUrl,
-            hint: 'Verifica los logs en Vercel para ver qué está pasando'
-          });
-          resolve();
-        }
-      }, 4000);
+      }, 10000);
     });
     
   } catch (error) {
