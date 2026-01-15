@@ -17,9 +17,10 @@ const connectDB = async () => {
     }
 
     const conn = await mongoose.connect(MONGODB_URI, {
-      // Opciones de conexión para serverless
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+      // Opciones de conexión para serverless (timeouts más cortos)
+      serverSelectionTimeoutMS: 3000, // Reducido de 5000 a 3000
+      socketTimeoutMS: 10000, // Reducido de 45000 a 10000
+      connectTimeoutMS: 3000, // Agregar timeout de conexión
     });
 
     cachedConnection = conn;
@@ -28,13 +29,19 @@ const connectDB = async () => {
   } catch (error) {
     console.error(`❌ Error conectando a MongoDB: ${error.message}`);
     
-    // En modo serverless (Vercel), no hacer exit para permitir que la función continúe
-    // Solo hacer exit en desarrollo local
-    if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+    // En modo serverless (Vercel), no lanzar el error para permitir que Express funcione
+    // Los endpoints pueden manejar la falta de conexión
+    if (process.env.VERCEL) {
+      console.warn('⚠️ Continuando sin MongoDB en modo serverless');
+      return null; // Retornar null en lugar de lanzar error
+    }
+    
+    // En desarrollo local, hacer exit solo si no es producción
+    if (process.env.NODE_ENV !== 'production') {
       process.exit(1);
     }
     
-    // En producción/serverless, lanzar el error pero no matar el proceso
+    // En producción local, lanzar el error
     throw error;
   }
 };

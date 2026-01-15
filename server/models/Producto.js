@@ -82,7 +82,7 @@ const productoSchema = new mongoose.Schema({
 // Índices
 productoSchema.index({ user_id: 1 });
 productoSchema.index({ nombre: 1 });
-productoSchema.index({ sku: 1 });
+// sku ya tiene índice único por el campo unique: true, no necesitamos otro
 productoSchema.index({ activo: 1 });
 
 const Producto = mongoose.model('Producto', productoSchema);
