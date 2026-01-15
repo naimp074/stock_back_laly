@@ -80,18 +80,33 @@ export default async function handler(req, res) {
     // la ruta que llega puede ser "/api/health" o solo "/health"
     // Necesitamos normalizar para Express
     
-    const originalUrl = req.url || '/';
-    console.log(`📥 [Vercel] ${req.method} ${originalUrl}`);
+    const originalUrl = req.url || req.path || '/';
+    console.log(`📥 [Vercel] Request original:`, {
+      url: req.url,
+      path: req.path,
+      originalUrl: req.originalUrl,
+      method: req.method
+    });
     
-    // Si la URL no empieza con /api, agregarlo
-    // Express espera rutas que empiecen con /api
+    // Vercel pasa la ruta completa con /api, pero Express también espera /api
+    // Necesitamos mantener la ruta tal como está si ya tiene /api
+    // O agregarlo si no lo tiene
+    let finalUrl = originalUrl;
     if (!originalUrl.startsWith('/api')) {
-      req.url = `/api${originalUrl === '/' ? '' : originalUrl}`;
-      req.originalUrl = `/api${originalUrl === '/' ? '' : originalUrl}`;
-      if (req.path !== undefined) {
-        req.path = `/api${originalUrl === '/' ? '' : originalUrl}`;
-      }
+      finalUrl = `/api${originalUrl === '/' ? '' : originalUrl}`;
     }
+    
+    // Actualizar todas las propiedades de URL en req
+    req.url = finalUrl;
+    req.originalUrl = finalUrl;
+    if (req.path !== undefined) {
+      req.path = finalUrl;
+    }
+    
+    console.log(`📥 [Vercel] URL final para Express: ${finalUrl}`);
+    
+    // Guardar finalUrl para usarla en el callback
+    const requestUrl = finalUrl;
     
     // Ejecutar Express
     // Usar Promise para manejar la respuesta asíncrona
@@ -120,15 +135,31 @@ export default async function handler(req, res) {
       // Ejecutar Express
       expressApp(req, res, (err) => {
         if (err) {
-          console.error('❌ [Vercel] Error en Express:', err);
+          console.error('❌ [Vercel] Error en Express middleware:', err);
+          console.error('Error stack:', err.stack);
           if (!responseSent) {
             sendJSON(500, {
               success: false,
               message: 'Error procesando request en Express',
-              error: process.env.VERCEL_ENV !== 'production' ? err.message : undefined
+              error: process.env.VERCEL_ENV !== 'production' ? err.message : undefined,
+              ...(process.env.VERCEL_ENV !== 'production' && { stack: err.stack })
             });
             resolve();
           }
+        } else {
+          // Si no hay error pero tampoco respuesta, puede ser que Express no encontró la ruta
+          setTimeout(() => {
+            if (!responseSent) {
+              console.warn('⚠️ [Vercel] Express no envió respuesta. Ruta no encontrada?');
+              sendJSON(404, {
+                success: false,
+                message: 'Ruta no encontrada',
+                url: requestUrl,
+                hint: 'Verifica que la ruta esté definida en Express'
+              });
+              resolve();
+            }
+          }, 1000);
         }
       });
       
