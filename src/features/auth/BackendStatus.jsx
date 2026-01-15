@@ -17,6 +17,27 @@ export default function BackendStatus() {
     verificarBackend();
   }, []);
 
+  // Función helper para hacer fetch con timeout
+  async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      if (error.name === 'AbortError') {
+        throw new Error('Timeout: La petición tardó demasiado');
+      }
+      throw error;
+    }
+  }
+
   async function verificarBackend() {
     setVerificando(true);
     const inicio = Date.now();
@@ -24,7 +45,7 @@ export default function BackendStatus() {
     // Verificar health check
     try {
       const healthUrl = import.meta.env.PROD ? '/api/health' : 'http://localhost:3000/api/health';
-      const healthResponse = await fetch(healthUrl);
+      const healthResponse = await fetchWithTimeout(healthUrl, {}, 5000);
       const healthData = await healthResponse.json();
       const tiempo = Date.now() - inicio;
       
@@ -60,8 +81,13 @@ export default function BackendStatus() {
     }
 
     // Verificar endpoints principales
-    await verificarEndpoints();
-    setVerificando(false);
+    try {
+      await verificarEndpoints();
+    } catch (error) {
+      console.error('Error verificando endpoints:', error);
+    } finally {
+      setVerificando(false);
+    }
   }
 
   async function verificarEndpoints() {
@@ -76,7 +102,8 @@ export default function BackendStatus() {
       { nombre: 'Reportes', url: '/reportes/estadisticas', metodo: 'GET', requiereAuth: true },
     ];
 
-    const resultados = await Promise.all(
+    // Usar Promise.allSettled para que no falle todo si uno falla
+    const resultados = await Promise.allSettled(
       endpoints.map(async (endpoint) => {
         try {
           const url = `${API_URL}${endpoint.url}`;
@@ -84,15 +111,15 @@ export default function BackendStatus() {
           
           let response;
           if (endpoint.metodo === 'GET') {
-            response = await fetch(url, {
+            response = await fetchWithTimeout(url, {
               method: endpoint.metodo,
               headers: endpoint.requiereAuth ? {
                 'Authorization': 'Bearer test-token'
               } : {}
-            });
+            }, 5000);
           } else {
             // Para POST, solo verificamos que el endpoint existe (401 o 400 es OK, significa que el endpoint funciona)
-            response = await fetch(url, {
+            response = await fetchWithTimeout(url, {
               method: endpoint.metodo,
               headers: {
                 'Content-Type': 'application/json',
@@ -101,7 +128,7 @@ export default function BackendStatus() {
               body: endpoint.url.includes('login') || endpoint.url.includes('registro') 
                 ? JSON.stringify({ email: 'test@test.com', password: 'test' })
                 : '{}'
-            });
+            }, 5000);
           }
           
           const tiempo = Date.now() - inicio;
@@ -126,20 +153,39 @@ export default function BackendStatus() {
                 : `Error ${status}`
           };
         } catch (error) {
+          const tiempo = Date.now() - inicio;
           return {
             ...endpoint,
             estado: 'error',
             status: 0,
-            tiempo: 0,
-            mensaje: `Error: ${error.message}`
+            tiempo: tiempo,
+            mensaje: error.message.includes('Timeout') 
+              ? 'Timeout: Tardó demasiado en responder' 
+              : `Error: ${error.message}`
           };
         }
       })
     );
 
+    // Procesar resultados de Promise.allSettled
+    const resultadosProcesados = resultados.map((resultado, idx) => {
+      if (resultado.status === 'fulfilled') {
+        return resultado.value;
+      } else {
+        // Si falló, retornar un resultado de error
+        return {
+          ...endpoints[idx],
+          estado: 'error',
+          status: 0,
+          tiempo: 0,
+          mensaje: `Error: ${resultado.reason?.message || 'Error desconocido'}`
+        };
+      }
+    });
+
     setEstado(prev => ({
       ...prev,
-      endpoints: resultados
+      endpoints: resultadosProcesados
     }));
   }
 
