@@ -123,58 +123,69 @@ export default async function handler(req, res) {
         resolve();
       };
       
-      // Interceptar res.json
+      // Interceptar res.json - CRÍTICO: debe llamar a resolve
       const originalJson = res.json.bind(res);
       res.json = function(data) {
+        console.log(`📤 [Vercel] res.json llamado con:`, typeof data === 'object' ? JSON.stringify(data).substring(0, 100) : data);
         if (!responseSent) {
           responseSent = true;
-          const result = originalJson(data);
-          resolve();
-          return result;
+          try {
+            const result = originalJson(data);
+            // Asegurar que resolve se llama después de enviar
+            setImmediate(() => resolve());
+            return result;
+          } catch (err) {
+            console.error('Error en res.json:', err);
+            resolve();
+          }
         }
       };
       
       // Interceptar res.send también
       const originalSend = res.send.bind(res);
       res.send = function(data) {
+        console.log(`📤 [Vercel] res.send llamado`);
         if (!responseSent) {
           responseSent = true;
-          const result = originalSend(data);
-          resolve();
-          return result;
+          try {
+            const result = originalSend(data);
+            setImmediate(() => resolve());
+            return result;
+          } catch (err) {
+            console.error('Error en res.send:', err);
+            resolve();
+          }
         }
       };
       
+      // Interceptar res.status también para logging
+      const originalStatus = res.status.bind(res);
+      res.status = function(code) {
+        console.log(`📤 [Vercel] res.status(${code}) llamado`);
+        return originalStatus(code);
+      };
+      
       // Ejecutar Express
-      expressApp(req, res, (err) => {
-        if (err) {
-          console.error('❌ [Vercel] Error en Express middleware:', err);
-          console.error('Error stack:', err.stack);
-          if (!responseSent) {
-            sendJSON(500, {
-              success: false,
-              message: 'Error procesando request en Express',
-              error: process.env.VERCEL_ENV !== 'production' ? err.message : undefined,
-              ...(process.env.VERCEL_ENV !== 'production' && { stack: err.stack })
-            });
-            resolve();
-          }
+      console.log(`🚀 [Vercel] Ejecutando Express para ${req.method} ${requestUrl}`);
+      expressApp(req, res);
+      
+      // Verificar después de un tiempo si Express respondió
+      // Si no respondió, enviar un error
+      setTimeout(() => {
+        if (!responseSent) {
+          console.warn('⚠️ [Vercel] Express no envió respuesta después de 3 segundos');
+          console.warn('URL solicitada:', requestUrl);
+          console.warn('Method:', req.method);
+          console.warn('Headers sent:', res.headersSent);
+          sendJSON(504, {
+            success: false,
+            message: 'Timeout: Express no respondió',
+            url: requestUrl,
+            hint: 'Verifica los logs en Vercel para más detalles'
+          });
+          resolve();
         }
-        // Si no hay error, Express debería enviar la respuesta
-        // Si después de 2 segundos no hay respuesta, asumimos que no encontró la ruta
-        setTimeout(() => {
-          if (!responseSent) {
-            console.warn('⚠️ [Vercel] Express no envió respuesta después de 2 segundos. Ruta no encontrada?');
-            sendJSON(404, {
-              success: false,
-              message: 'Ruta no encontrada o no respondió',
-              url: requestUrl,
-              hint: 'Verifica que la ruta esté definida en Express'
-            });
-            resolve();
-          }
-        }, 2000);
-      });
+      }, 3000);
       
       // Timeout de seguridad (reducido a 4 segundos para que coincida con el frontend)
       setTimeout(() => {
