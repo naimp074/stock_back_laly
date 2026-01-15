@@ -21,17 +21,27 @@ dotenv.config();
 // En serverless, esto se ejecuta cuando se importa el módulo
 // pero no debe bloquear la creación de la app Express
 let dbConnected = false;
-connectDB()
-  .then(() => {
-    dbConnected = true;
-    console.log('✅ MongoDB conectado exitosamente');
-  })
-  .catch(err => {
-    console.error('⚠️ Error inicializando MongoDB:', err.message);
-    console.error('La aplicación continuará sin MongoDB. Algunos endpoints pueden no funcionar.');
-    // En serverless, no hacer exit, permitir que la función continúe
-    // Los endpoints pueden manejar la falta de conexión
-  });
+let dbError = null;
+
+// Intentar conectar pero no fallar si no se puede
+try {
+  connectDB()
+    .then(() => {
+      dbConnected = true;
+      console.log('✅ MongoDB conectado exitosamente');
+    })
+    .catch(err => {
+      dbError = err;
+      console.error('⚠️ Error inicializando MongoDB:', err.message);
+      console.error('La aplicación continuará sin MongoDB. Algunos endpoints pueden no funcionar.');
+      // En serverless, no hacer exit, permitir que la función continúe
+      // Los endpoints pueden manejar la falta de conexión
+    });
+} catch (err) {
+  dbError = err;
+  console.error('⚠️ Error al intentar conectar MongoDB:', err.message);
+  // Continuar sin MongoDB
+}
 
 // Crear aplicación Express
 const app = express();
@@ -79,16 +89,28 @@ app.use('/api/reportes', reportesRoutes);
 
 // Ruta de prueba - debe funcionar incluso sin MongoDB
 app.get('/api/health', (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'conectado' : 'desconectado';
-  
-  res.status(200).json({
-    success: true,
-    message: 'API funcionando correctamente',
-    timestamp: new Date().toISOString(),
-    database: dbStatus,
-    environment: process.env.NODE_ENV || 'development',
-    vercel: !!process.env.VERCEL
-  });
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'conectado' : 'desconectado';
+    const hasMongoUri = !!process.env.MONGODB_URI;
+    
+    res.status(200).json({
+      success: true,
+      message: 'API funcionando correctamente',
+      timestamp: new Date().toISOString(),
+      database: dbStatus,
+      hasMongoUri: hasMongoUri,
+      environment: process.env.NODE_ENV || 'development',
+      vercel: !!process.env.VERCEL,
+      ...(dbError && { dbError: dbError.message })
+    });
+  } catch (error) {
+    res.status(200).json({
+      success: true,
+      message: 'API funcionando (con errores)',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
 });
 
 // Manejo de rutas no encontradas

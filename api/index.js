@@ -3,31 +3,27 @@
  * Wrapper del servidor Express para funcionar como función serverless
  */
 
+// Intentar cargar la app de Express
 let app = null;
-let appLoading = false;
+let loadError = null;
 
-// Cargar la app de forma lazy para evitar errores en la importación
+// Función para cargar la app de forma segura
 async function loadApp() {
-  if (app) return app;
-  if (appLoading) {
-    // Esperar a que termine la carga anterior
-    await new Promise(resolve => setTimeout(resolve, 100));
-    return app;
-  }
+  if (app) return { app, error: null };
+  if (loadError) return { app: null, error: loadError };
   
-  appLoading = true;
   try {
+    console.log('🔄 Cargando aplicación Express...');
     const serverModule = await import('../server/server.js');
     app = serverModule.default;
     console.log('✅ App Express cargada correctamente');
+    return { app, error: null };
   } catch (error) {
     console.error('❌ Error cargando app Express:', error);
-    throw error;
-  } finally {
-    appLoading = false;
+    console.error('Error stack:', error.stack);
+    loadError = error;
+    return { app: null, error };
   }
-  
-  return app;
 }
 
 export default async function handler(req, res) {
@@ -45,7 +41,18 @@ export default async function handler(req, res) {
 
   try {
     // Cargar la app si no está cargada
-    const expressApp = await loadApp();
+    const { app: expressApp, error: loadErr } = await loadApp();
+    
+    // Si hay error cargando la app, devolver información útil
+    if (loadErr) {
+      console.error('Error de carga:', loadErr.message);
+      return sendJSON(500, {
+        success: false,
+        message: 'Error inicializando servidor',
+        error: process.env.VERCEL_ENV !== 'production' ? loadErr.message : undefined,
+        hint: 'Verifica los logs en Vercel para más detalles. Asegúrate de que MONGODB_URI y JWT_SECRET estén configuradas.'
+      });
+    }
     
     if (!expressApp) {
       return sendJSON(500, {
@@ -59,11 +66,8 @@ export default async function handler(req, res) {
     // la ruta puede venir como "/api/health" o solo "/health"
     const originalUrl = req.url || req.path || '/';
     
-    // Log para debugging (solo en desarrollo)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Request URL original:', originalUrl);
-      console.log('Request method:', req.method);
-    }
+    // Log para debugging
+    console.log(`📥 ${req.method} ${originalUrl}`);
     
     // Si la URL no empieza con /api, agregarlo
     // Express espera rutas que empiecen con /api
@@ -79,19 +83,19 @@ export default async function handler(req, res) {
     expressApp(req, res);
     
   } catch (error) {
-    console.error('Error en función serverless:', error);
-    console.error('Error stack:', error.stack);
+    console.error('❌ Error en función serverless:', error);
     console.error('Error name:', error.name);
     console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
     // Asegurarse de enviar una respuesta JSON incluso si hay error
     sendJSON(500, {
       success: false,
       message: 'Error interno del servidor',
-      error: process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV !== 'production' 
+      error: process.env.VERCEL_ENV !== 'production' 
         ? error.message 
         : undefined,
-      ...(process.env.NODE_ENV === 'development' && { 
+      ...(process.env.VERCEL_ENV !== 'production' && { 
         stack: error.stack,
         name: error.name
       })
