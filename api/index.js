@@ -128,7 +128,20 @@ export default async function handler(req, res) {
       res.json = function(data) {
         if (!responseSent) {
           responseSent = true;
-          return originalJson(data);
+          const result = originalJson(data);
+          resolve();
+          return result;
+        }
+      };
+      
+      // Interceptar res.send también
+      const originalSend = res.send.bind(res);
+      res.send = function(data) {
+        if (!responseSent) {
+          responseSent = true;
+          const result = originalSend(data);
+          resolve();
+          return result;
         }
       };
       
@@ -163,17 +176,19 @@ export default async function handler(req, res) {
         }
       });
       
-      // Timeout de seguridad
+      // Timeout de seguridad (reducido a 4 segundos para que coincida con el frontend)
       setTimeout(() => {
         if (!responseSent) {
-          console.warn('⚠️ [Vercel] Timeout: Express no respondió');
+          console.warn('⚠️ [Vercel] Timeout: Express no respondió en 4 segundos');
           sendJSON(504, {
             success: false,
-            message: 'Timeout: El servidor tardó demasiado en responder'
+            message: 'Timeout: El servidor tardó demasiado en responder',
+            url: requestUrl,
+            hint: 'Verifica los logs en Vercel para ver qué está pasando'
           });
           resolve();
         }
-      }, 10000);
+      }, 4000);
     });
     
   } catch (error) {

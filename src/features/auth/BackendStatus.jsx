@@ -17,8 +17,8 @@ export default function BackendStatus() {
     verificarBackend();
   }, []);
 
-  // Función helper para hacer fetch con timeout
-  async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+  // Función helper para hacer fetch con timeout (reducido a 4 segundos)
+  async function fetchWithTimeout(url, options = {}, timeout = 4000) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     
@@ -45,7 +45,7 @@ export default function BackendStatus() {
     // Verificar health check
     try {
       const healthUrl = import.meta.env.PROD ? '/api/health' : 'http://localhost:3000/api/health';
-      const healthResponse = await fetchWithTimeout(healthUrl, {}, 5000);
+      const healthResponse = await fetchWithTimeout(healthUrl, {}, 4000);
       const healthData = await healthResponse.json();
       const tiempo = Date.now() - inicio;
       
@@ -116,7 +116,7 @@ export default function BackendStatus() {
               headers: endpoint.requiereAuth ? {
                 'Authorization': 'Bearer test-token'
               } : {}
-            }, 5000);
+            }, 4000);
           } else {
             // Para POST, solo verificamos que el endpoint existe (401 o 400 es OK, significa que el endpoint funciona)
             response = await fetchWithTimeout(url, {
@@ -128,7 +128,7 @@ export default function BackendStatus() {
               body: endpoint.url.includes('login') || endpoint.url.includes('registro') 
                 ? JSON.stringify({ email: 'test@test.com', password: 'test' })
                 : '{}'
-            }, 5000);
+            }, 4000);
           }
           
           const tiempo = Date.now() - inicio;
