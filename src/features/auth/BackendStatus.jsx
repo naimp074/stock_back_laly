@@ -105,9 +105,9 @@ export default function BackendStatus() {
     // Usar Promise.allSettled para que no falle todo si uno falla
     const resultados = await Promise.allSettled(
       endpoints.map(async (endpoint) => {
+        const inicio = Date.now(); // Definir inicio antes del try para que esté disponible en el catch
         try {
           const url = `${API_URL}${endpoint.url}`;
-          const inicio = Date.now();
           
           let response;
           if (endpoint.metodo === 'GET') {
