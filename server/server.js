@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import connectDB from './config/database.js';
 
 // Importar rutas
@@ -16,12 +17,21 @@ import reportesRoutes from './routes/reportesRoutes.js';
 // Cargar variables de entorno
 dotenv.config();
 
-// Conectar a MongoDB (manejar errores sin matar el proceso en serverless)
-connectDB().catch(err => {
-  console.error('Error inicializando MongoDB:', err);
-  // En serverless, no hacer exit, permitir que la función continúe
-  // Los endpoints pueden manejar la falta de conexión
-});
+// Conectar a MongoDB de forma asíncrona sin bloquear
+// En serverless, esto se ejecuta cuando se importa el módulo
+// pero no debe bloquear la creación de la app Express
+let dbConnected = false;
+connectDB()
+  .then(() => {
+    dbConnected = true;
+    console.log('✅ MongoDB conectado exitosamente');
+  })
+  .catch(err => {
+    console.error('⚠️ Error inicializando MongoDB:', err.message);
+    console.error('La aplicación continuará sin MongoDB. Algunos endpoints pueden no funcionar.');
+    // En serverless, no hacer exit, permitir que la función continúe
+    // Los endpoints pueden manejar la falta de conexión
+  });
 
 // Crear aplicación Express
 const app = express();
@@ -67,12 +77,17 @@ app.use('/api/cuentas-corrientes', cuentasCorrientesRoutes);
 app.use('/api/notas-credito', notasCreditoRoutes);
 app.use('/api/reportes', reportesRoutes);
 
-// Ruta de prueba
+// Ruta de prueba - debe funcionar incluso sin MongoDB
 app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'conectado' : 'desconectado';
+  
   res.status(200).json({
     success: true,
     message: 'API funcionando correctamente',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    database: dbStatus,
+    environment: process.env.NODE_ENV || 'development',
+    vercel: !!process.env.VERCEL
   });
 });
 
