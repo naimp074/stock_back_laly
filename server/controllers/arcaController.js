@@ -24,9 +24,9 @@ const AFIP_PRODUCTION = process.env.AFIP_PRODUCTION === 'true' || false; // fals
 let afipInstance = null;
 
 /**
- * Verificar si AFIP está configurado
+ * Verificar si AFIP está configurado (función interna)
  */
-function verificarConfiguracion() {
+function checkAfipConfig() {
   if (!AFIP_CUIT) {
     throw new Error('AFIP_CUIT no está configurado. Verifica la variable de entorno AFIP_CUIT');
   }
@@ -46,7 +46,7 @@ function verificarConfiguracion() {
  */
 function getAfipInstance() {
   if (!afipInstance) {
-    verificarConfiguracion();
+    checkAfipConfig();
     
     // Configuración para AFIP SDK
     const afipConfig = {
@@ -154,7 +154,7 @@ async function obtenerUltimoNumeroComprobante(afip, puntoVenta, tipoComprobante)
  */
 export const crearFacturaArca = async (req, res) => {
   try {
-    verificarConfiguracion();
+    checkAfipConfig();
     const afip = getAfipInstance();
 
     const {
@@ -275,7 +275,7 @@ export const crearFacturaArca = async (req, res) => {
  */
 export const obtenerEstadoComprobante = async (req, res) => {
   try {
-    verificarConfiguracion();
+    checkAfipConfig();
     const afip = getAfipInstance();
 
     const { puntoVenta, numeroComprobante, tipoComprobante } = req.params;
