@@ -159,21 +159,21 @@ export default async function handler(req, res) {
             });
             resolve();
           }
-        } else {
-          // Si no hay error pero tampoco respuesta, puede ser que Express no encontró la ruta
-          setTimeout(() => {
-            if (!responseSent) {
-              console.warn('⚠️ [Vercel] Express no envió respuesta. Ruta no encontrada?');
-              sendJSON(404, {
-                success: false,
-                message: 'Ruta no encontrada',
-                url: requestUrl,
-                hint: 'Verifica que la ruta esté definida en Express'
-              });
-              resolve();
-            }
-          }, 1000);
         }
+        // Si no hay error, Express debería enviar la respuesta
+        // Si después de 2 segundos no hay respuesta, asumimos que no encontró la ruta
+        setTimeout(() => {
+          if (!responseSent) {
+            console.warn('⚠️ [Vercel] Express no envió respuesta después de 2 segundos. Ruta no encontrada?');
+            sendJSON(404, {
+              success: false,
+              message: 'Ruta no encontrada o no respondió',
+              url: requestUrl,
+              hint: 'Verifica que la ruta esté definida en Express'
+            });
+            resolve();
+          }
+        }, 2000);
       });
       
       // Timeout de seguridad (reducido a 4 segundos para que coincida con el frontend)
