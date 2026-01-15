@@ -3,7 +3,10 @@
  * Maneja todas las peticiones HTTP al backend con autenticación JWT
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// En producción (Vercel), usar rutas relativas
+// En desarrollo, usar la URL del backend local
+const API_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api');
 
 /**
  * Obtener el token JWT del usuario actual

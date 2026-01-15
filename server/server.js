@@ -23,8 +23,24 @@ connectDB();
 const app = express();
 
 // Middleware
+// En Vercel, permitir el origen del dominio de Vercel
+const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || 
+  (process.env.VERCEL_URL 
+    ? [`https://${process.env.VERCEL_URL}`, `https://${process.env.VERCEL_URL.replace('https://', '')}`]
+    : ['http://localhost:5173', 'http://localhost:3000']);
+
 app.use(cors({
-  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'],
+  origin: function (origin, callback) {
+    // Permitir requests sin origen (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Permitir cualquier origen en desarrollo o si está en la lista
+    if (process.env.NODE_ENV !== 'production' || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Temporalmente permitir todos en producción
+    }
+  },
   credentials: true
 }));
 
@@ -74,13 +90,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Iniciar servidor
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
-});
+// Iniciar servidor solo si no estamos en modo serverless (Vercel)
+// Vercel establece VERCEL=1 cuando ejecuta serverless functions
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+    console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
+  });
+}
 
 export default app;
 

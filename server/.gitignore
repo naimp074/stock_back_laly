@@ -3,6 +3,14 @@ node_modules/
 *.log
 .DS_Store
 
+# Certificados AFIP (nunca subir a Git)
+*.pem
+*.key
+*.crt
+*.pfx
+cert.pem
+key.pem
+
 
 
 

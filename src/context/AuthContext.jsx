@@ -4,7 +4,10 @@ import api, { setToken, removeToken } from '../lib/apiClient';
 const AuthContext = createContext(undefined);
 
 const STORAGE_KEY_USUARIO = 'usuario_actual';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// En producción (Vercel), usar rutas relativas
+// En desarrollo, usar la URL del backend local
+const API_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api');
 const USE_BACKEND_AUTH = true; // Cambiar a false para usar solo localStorage
 
 export function AuthProvider({ children }) {

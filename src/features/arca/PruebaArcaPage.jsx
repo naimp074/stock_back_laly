@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Card, Form, Button, Alert, Table, Badge } from 'react-bootstrap';
-import { crearFacturaArca, obtenerEstadoComprobante } from '../../services/arcaService';
+import { crearFacturaArca, obtenerEstadoComprobante, verificarConfiguracionArca } from '../../services/arcaService';
 import Swal from 'sweetalert2';
 
 export default function PruebaArcaPage() {
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [error, setError] = useState('');
+  const [config, setConfig] = useState({ configurado: false, mensaje: 'Verificando configuración...' });
 
   // Datos del formulario
   const [cliente, setCliente] = useState('Cliente de Prueba');
@@ -24,26 +25,35 @@ export default function PruebaArcaPage() {
     { descripcion: 'Producto de Prueba 2', cantidad: 1, precio_unitario: 500, alicuota_iva: 21 }
   ]);
 
-  // Verificar configuración
-  const verificarConfiguracion = () => {
-    const apiKey = import.meta.env.VITE_ARCA_API_KEY;
-    const apiToken = import.meta.env.VITE_ARCA_API_TOKEN;
-    const userToken = import.meta.env.VITE_ARCA_USER_TOKEN;
-
-    if (!apiKey || !apiToken || !userToken) {
-      return {
-        configurado: false,
-        mensaje: '⚠️ Las credenciales de Arca no están configuradas. Agrega las variables de entorno en tu archivo .env'
-      };
-    }
-
-    return {
-      configurado: true,
-      mensaje: '✅ Credenciales configuradas correctamente'
+  // Verificar configuración desde el backend al cargar el componente
+  useEffect(() => {
+    const verificarConfig = async () => {
+      try {
+        const configData = await verificarConfiguracionArca();
+        if (configData.configurado) {
+          setConfig({
+            configurado: true,
+            mensaje: `✅ AFIP SDK configurado correctamente (${configData.ambiente || 'HOMOLOGACIÓN'})`,
+            detalles: configData
+          });
+        } else {
+          setConfig({
+            configurado: false,
+            mensaje: '⚠️ AFIP SDK no está configurado. Verifica las variables de entorno en el backend.',
+            detalles: configData
+          });
+        }
+      } catch (error) {
+        setConfig({
+          configurado: false,
+          mensaje: '⚠️ Error al verificar configuración de AFIP SDK',
+          error: error.message
+        });
+      }
     };
-  };
 
-  const config = verificarConfiguracion();
+    verificarConfig();
+  }, []);
 
   // Agregar nuevo item
   const agregarItem = () => {
@@ -182,7 +192,7 @@ export default function PruebaArcaPage() {
 
   return (
     <Container>
-      <h2 className="mb-4">🧪 Prueba de Integración con Arca</h2>
+      <h2 className="mb-4">🧪 Prueba de Integración con AFIP SDK</h2>
 
       {/* Alerta de configuración */}
       <Alert variant={config.configurado ? 'success' : 'warning'} className="mb-4">
@@ -190,7 +200,24 @@ export default function PruebaArcaPage() {
         {!config.configurado && (
           <div className="mt-2">
             <small>
-              Variables necesarias: VITE_ARCA_API_KEY, VITE_ARCA_API_TOKEN, VITE_ARCA_USER_TOKEN
+              Variables necesarias en el backend (.env): AFIP_CUIT, AFIP_CERT_PATH, AFIP_KEY_PATH, AFIP_PRODUCTION
+            </small>
+            {config.detalles && (
+              <div className="mt-2">
+                <small>
+                  <strong>Detalles:</strong> CUIT: {config.detalles.tieneCuit ? '✅' : '❌'} | 
+                  Certificado: {config.detalles.tieneCertificado ? '✅' : '❌'} | 
+                  Clave: {config.detalles.tieneClavePrivada ? '✅' : '❌'}
+                </small>
+              </div>
+            )}
+          </div>
+        )}
+        {config.configurado && config.detalles && (
+          <div className="mt-2">
+            <small>
+              <strong>CUIT:</strong> {config.detalles.cuit} | 
+              <strong> Ambiente:</strong> {config.detalles.ambiente}
             </small>
           </div>
         )}
@@ -394,7 +421,7 @@ export default function PruebaArcaPage() {
           onClick={probarCrearFactura}
           disabled={loading || !config.configurado || items.length === 0}
         >
-          {loading ? '⏳ Creando factura...' : '🚀 Crear Factura en Arca'}
+          {loading ? '⏳ Creando factura...' : '🚀 Crear Factura en AFIP'}
         </Button>
       </div>
 
@@ -452,11 +479,12 @@ export default function PruebaArcaPage() {
         </Card.Header>
         <Card.Body>
           <ol>
-            <li>Configura las variables de entorno en tu archivo <code>.env</code></li>
+            <li>Configura las variables de entorno en el backend (<code>server/.env</code>): AFIP_CUIT, AFIP_CERT_PATH, AFIP_KEY_PATH</li>
+            <li>Coloca los certificados AFIP (cert.pem y key.pem) en la carpeta del servidor</li>
             <li>Completa los datos del cliente y los items</li>
-            <li>Haz clic en "Crear Factura en Arca"</li>
-            <li>Si todo está bien configurado, verás el CAE y podrás descargar el PDF</li>
-            <li>Verifica en tu panel de TusFacturasAPP que la factura se haya creado</li>
+            <li>Haz clic en "Crear Factura en AFIP"</li>
+            <li>Si todo está bien configurado, verás el CAE autorizado por AFIP</li>
+            <li>Nota: AFIP SDK no proporciona URLs de PDF, deberás generarlo localmente con los datos del comprobante</li>
           </ol>
         </Card.Body>
       </Card>

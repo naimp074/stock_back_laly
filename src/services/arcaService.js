@@ -1,26 +1,27 @@
 /**
- * Servicio para integración con Arca (TusFacturasAPP)
+ * Servicio para integración con AFIP SDK
  * API de Facturación Electrónica Argentina
  * 
- * Documentación: https://developers.tusfacturas.app
+ * Documentación: https://afipsdk.com
+ * SDK: @afipsdk/afip.js
  * 
- * NOTA: Este servicio ahora usa el backend para mayor seguridad.
- * Las credenciales de Arca están configuradas en el servidor.
+ * NOTA: Este servicio usa el backend para mayor seguridad.
+ * Los certificados y credenciales de AFIP están configurados en el servidor.
  */
 
 import api from '../lib/apiClient';
 
 /**
- * Crear una factura electrónica en Arca
+ * Crear una factura electrónica usando AFIP SDK
  * @param {Object} datosFactura - Datos de la factura
  * @param {string} datosFactura.cliente - Nombre del cliente
  * @param {string} datosFactura.cuit - CUIT del cliente (11 dígitos)
  * @param {string} datosFactura.direccion - Dirección del cliente
  * @param {Array} datosFactura.items - Array de items [{descripcion, cantidad, precio_unitario, alicuota_iva}]
- * @param {number} datosFactura.numeroFactura - Número de factura interno
+ * @param {number} datosFactura.numeroFactura - Número de factura interno (opcional, se genera automáticamente si no se especifica)
  * @param {string} datosFactura.tipoComprobante - Tipo: 'FACTURA_A', 'FACTURA_B', 'FACTURA_C', 'NOTA_CREDITO_A', etc.
  * @param {number} datosFactura.puntoVenta - Punto de venta (por defecto 1)
- * @returns {Promise<Object>} Respuesta de Arca con el comprobante generado
+ * @returns {Promise<Object>} Respuesta de AFIP con el comprobante generado (CAE, número, etc.)
  */
 export async function crearFacturaArca(datosFactura) {
   try {
@@ -41,11 +42,11 @@ export async function crearFacturaArca(datosFactura) {
       condicionIva: datosFactura.condicionIva || 'CONSUMIDOR_FINAL'
     };
 
-    // Llamar al backend que se encarga de comunicarse con Arca
+    // Llamar al backend que se encarga de comunicarse con AFIP SDK
     const response = await api.post('/arca/comprobantes', datosParaBackend);
 
     if (!response.success) {
-      throw new Error(response.message || 'Error al crear factura en Arca');
+      throw new Error(response.message || 'Error al crear factura en AFIP');
     }
 
     // Retornar en el formato esperado por el código existente
@@ -55,27 +56,27 @@ export async function crearFacturaArca(datosFactura) {
       cae: response.data.cae,
       numero_comprobante: response.data.numero_comprobante,
       punto_venta: response.data.punto_venta,
-      fecha_vencimiento_cae: response.data.fecha_vencimiento_cae,
-      pdf_url: response.data.pdf_url,
-      qr_url: response.data.qr_url
+      fecha_vencimiento_cae: response.data.fecha_vencimiento_cae || response.data.cae_fch_vto,
+      pdf_url: response.data.pdf_url, // Puede ser null si AFIP no proporciona URL directa
+      qr_url: response.data.qr_url // Puede ser null si AFIP no proporciona QR directo
     };
 
   } catch (error) {
-    console.error('Error al crear factura en Arca:', error);
+    console.error('Error al crear factura en AFIP:', error);
     throw error;
   }
 }
 
 /**
- * Obtener el estado de un comprobante en Arca
+ * Obtener el estado de un comprobante en AFIP
  * @param {number} puntoVenta - Punto de venta
  * @param {number} numeroComprobante - Número de comprobante
- * @param {string} tipoComprobante - Tipo de comprobante
- * @returns {Promise<Object>} Estado del comprobante
+ * @param {string} tipoComprobante - Tipo de comprobante ('FACTURA_A', 'FACTURA_B', etc.)
+ * @returns {Promise<Object>} Estado del comprobante desde AFIP
  */
 export async function obtenerEstadoComprobante(puntoVenta, numeroComprobante, tipoComprobante) {
   try {
-    // Llamar al backend que se encarga de comunicarse con Arca
+    // Llamar al backend que se encarga de comunicarse con AFIP SDK
     const response = await api.get(`/arca/comprobantes/${puntoVenta}/${numeroComprobante}/${tipoComprobante}`);
 
     if (!response.success) {
@@ -91,13 +92,19 @@ export async function obtenerEstadoComprobante(puntoVenta, numeroComprobante, ti
 
 /**
  * Descargar el PDF de un comprobante
- * @param {string} pdfUrl - URL del PDF proporcionada por Arca
+ * @param {string} pdfUrl - URL del PDF (si está disponible)
  * @returns {Promise<Blob>} Archivo PDF
+ * 
+ * NOTA: AFIP SDK no proporciona URLs directas de PDF.
+ * Deberás generar el PDF localmente usando los datos del comprobante.
  */
 export async function descargarPDFComprobante(pdfUrl) {
   try {
-    // Descargar directamente desde la URL proporcionada por Arca
-    // El backend ya no necesita intervenir aquí ya que es una URL pública
+    if (!pdfUrl) {
+      throw new Error('URL del PDF no disponible. AFIP SDK no proporciona URLs directas.');
+    }
+    
+    // Descargar directamente desde la URL si está disponible
     const respuesta = await fetch(pdfUrl);
 
     if (!respuesta.ok) {
@@ -112,24 +119,24 @@ export async function descargarPDFComprobante(pdfUrl) {
 }
 
 /**
- * Verificar si Arca está configurado en el backend
- * @returns {Promise<Object>} Estado de la configuración
+ * Verificar si AFIP SDK está configurado en el backend
+ * @returns {Promise<Object>} Estado de la configuración (CUIT, certificados, ambiente)
  */
 export async function verificarConfiguracionArca() {
   try {
     const response = await api.get('/arca/config');
     return response.data;
   } catch (error) {
-    console.error('Error al verificar configuración de Arca:', error);
+    console.error('Error al verificar configuración de AFIP:', error);
     throw error;
   }
 }
 
 /**
- * Convertir una venta local a formato Arca
+ * Convertir una venta local a formato AFIP
  * @param {Object} venta - Venta del sistema local
  * @param {Object} opciones - Opciones adicionales
- * @returns {Object} Datos formateados para Arca
+ * @returns {Object} Datos formateados para AFIP SDK
  */
 export function convertirVentaAArca(venta, opciones = {}) {
   return {
@@ -152,8 +159,3 @@ export function convertirVentaAArca(venta, opciones = {}) {
     observaciones: opciones.observaciones || `Factura Nº ${venta.numero_factura || venta.numeroFactura}`
   };
 }
-
-
-
-
-
