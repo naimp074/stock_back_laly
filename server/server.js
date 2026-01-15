@@ -16,8 +16,12 @@ import reportesRoutes from './routes/reportesRoutes.js';
 // Cargar variables de entorno
 dotenv.config();
 
-// Conectar a MongoDB
-connectDB();
+// Conectar a MongoDB (manejar errores sin matar el proceso en serverless)
+connectDB().catch(err => {
+  console.error('Error inicializando MongoDB:', err);
+  // En serverless, no hacer exit, permitir que la función continúe
+  // Los endpoints pueden manejar la falta de conexión
+});
 
 // Crear aplicación Express
 const app = express();
