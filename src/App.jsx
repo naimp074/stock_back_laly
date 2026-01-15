@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
+import BackendStatus from "./features/auth/BackendStatus";
 import Login from "./features/auth/Login";
 import { useAuth } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
@@ -41,31 +42,37 @@ const LoadingFallback = () => (
 function App() {
   const { usuario } = useAuth();
 
-  if (!usuario) {
-    return <Login />;
-  }  
-
   return (
     <>
-      <Navbar />
-      <Container fluid className="px-2 px-md-3 px-lg-4 main-content">
+      {usuario && <Navbar />}
+      <Container fluid className={usuario ? "px-2 px-md-3 px-lg-4 main-content" : ""}>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/" element={<Navigate to="/stock" />} />
-            <Route path="/stock" element={<StockPage />} />
-            <Route path="/ventas" element={<VentasPage />} />
-            <Route path="/presupuestos" element={<PresupuestosPage />} />
-            <Route path="/cuentacorriente" element={<CuentaCorriente />} />
-            <Route 
-              path="/reportes" 
-              element={
-                <ProtectedAdminRoute>
-                  <ReportesPage />
-                </ProtectedAdminRoute>
-              } 
-            />
-            <Route path="/notas-credito" element={<NotasCreditoPage />} />
-            <Route path="/prueba-arca" element={<PruebaArcaPage />} />
+            {!usuario ? (
+              <>
+                <Route path="/" element={<BackendStatus />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </>
+            ) : (
+              <>
+                <Route path="/" element={<Navigate to="/stock" />} />
+                <Route path="/stock" element={<StockPage />} />
+                <Route path="/ventas" element={<VentasPage />} />
+                <Route path="/presupuestos" element={<PresupuestosPage />} />
+                <Route path="/cuentacorriente" element={<CuentaCorriente />} />
+                <Route 
+                  path="/reportes" 
+                  element={
+                    <ProtectedAdminRoute>
+                      <ReportesPage />
+                    </ProtectedAdminRoute>
+                  } 
+                />
+                <Route path="/notas-credito" element={<NotasCreditoPage />} />
+                <Route path="/prueba-arca" element={<PruebaArcaPage />} />
+              </>
+            )}
           </Routes>
         </Suspense>
       </Container>
