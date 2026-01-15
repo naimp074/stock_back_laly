@@ -9,9 +9,17 @@
 - ✅ Acceso a todas las rutas
 
 ### Empleado
-- ✅ Puede gestionar productos, ventas, cuentas corrientes y notas de crédito
+- ✅ Puede gestionar productos (stock) - ver y cargar productos
+- ✅ Puede gestionar ventas - crear, ver, editar y eliminar ventas
+- ✅ Puede gestionar presupuestos - crear, ver, editar y eliminar presupuestos
+- ✅ Puede gestionar cuentas corrientes - ver y gestionar cuentas corrientes
+- ✅ Puede gestionar notas de crédito - crear, ver, editar y eliminar notas de crédito
+- ✅ Puede usar prueba arca - acceder a funcionalidades de prueba arca
+- ✅ **Todos los roles ven el mismo stock, ventas, presupuestos, cuentas corrientes, notas de crédito y prueba arca**
 - ❌ **NO puede ver reportes ni gráficos**
 - ❌ No puede gestionar usuarios
+
+**Nota importante**: Todos los roles (admin y empleado) tienen acceso completo a las mismas funcionalidades de stock, ventas, presupuestos, cuentas corrientes, notas de crédito y prueba arca. La única diferencia es que solo el admin puede ver reportes y gestionar usuarios.
 
 ## 🚀 Endpoints de Autenticación
 
@@ -155,10 +163,17 @@ const response = await fetch('http://localhost:3000/api/productos', {
    - El token debe incluirse en todas las peticiones protegidas
 
 3. **Rutas Protegidas**: 
-   - Todas las rutas de productos, ventas, cuentas corrientes y notas de crédito requieren autenticación
+   - Todas las rutas de productos (stock), ventas, presupuestos, cuentas corrientes, notas de crédito y prueba arca requieren solo autenticación (cualquier rol autenticado puede acceder)
    - Las rutas de reportes requieren además rol de admin
+   - Las rutas de gestión de usuarios requieren rol de admin
 
-4. **Empleados y Reportes**: 
+4. **Igualdad de Acceso**: 
+   - Todos los roles (admin y empleado) tienen acceso completo a las mismas funcionalidades de stock, ventas, presupuestos, cuentas corrientes, notas de crédito y prueba arca
+   - Todos pueden ver y cargar el mismo stock
+   - Todos pueden crear, editar y eliminar ventas, presupuestos, cuentas corrientes y notas de crédito
+   - La única diferencia es que solo el admin puede ver reportes y gestionar usuarios
+
+5. **Empleados y Reportes**: 
    - Si un empleado intenta acceder a `/api/reportes/*`, recibirá un error 403 (Forbidden)
 
 ## 🛠️ Crear Primer Admin Manualmente
