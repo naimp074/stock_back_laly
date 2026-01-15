@@ -113,17 +113,27 @@ export default async function handler(req, res) {
     return new Promise((resolve) => {
       let responseSent = false;
       
-      // Interceptar res.end para saber cuándo termina
+      // Interceptar res.end para saber cuándo termina - ESTE ES EL MOMENTO CRÍTICO
       const originalEnd = res.end.bind(res);
       res.end = function(...args) {
+        console.log(`📤 [Vercel] res.end llamado - respuesta completa`);
         if (!responseSent) {
           responseSent = true;
-          originalEnd.apply(this, args);
+          try {
+            originalEnd.apply(this, args);
+          } finally {
+            // Resolver el Promise DESPUÉS de que se envíe la respuesta
+            process.nextTick(() => {
+              console.log(`✅ [Vercel] Promise resuelto - respuesta enviada`);
+              resolve();
+            });
+          }
+        } else {
+          resolve();
         }
-        resolve();
       };
       
-      // Interceptar res.json - CRÍTICO: debe llamar a resolve
+      // Interceptar res.json - debe asegurar que res.end se llame
       const originalJson = res.json.bind(res);
       res.json = function(data) {
         console.log(`📤 [Vercel] res.json llamado con:`, typeof data === 'object' ? JSON.stringify(data).substring(0, 100) : data);
@@ -131,14 +141,23 @@ export default async function handler(req, res) {
           responseSent = true;
           try {
             const result = originalJson(data);
-            // Asegurar que resolve se llama después de enviar
-            setImmediate(() => resolve());
+            // res.json internamente llama a res.end, así que el Promise se resolverá ahí
             return result;
           } catch (err) {
             console.error('Error en res.json:', err);
-            resolve();
+            // Si hay error, asegurar que res.end se llame para resolver el Promise
+            if (!res.headersSent) {
+              try {
+                res.status(500).end();
+              } catch (e) {
+                // Si falla, resolver el Promise de todas formas
+                process.nextTick(() => resolve());
+              }
+            }
+            throw err;
           }
         }
+        return this;
       };
       
       // Interceptar res.send también
@@ -149,13 +168,22 @@ export default async function handler(req, res) {
           responseSent = true;
           try {
             const result = originalSend(data);
-            setImmediate(() => resolve());
+            // res.send también llama a res.end internamente
             return result;
           } catch (err) {
             console.error('Error en res.send:', err);
-            resolve();
+            // Si hay error, asegurar que res.end se llame
+            if (!res.headersSent) {
+              try {
+                res.status(500).end();
+              } catch (e) {
+                process.nextTick(() => resolve());
+              }
+            }
+            throw err;
           }
         }
+        return this;
       };
       
       // Interceptar res.status también para logging
