@@ -13,6 +13,7 @@ import arcaRoutes from './routes/arcaRoutes.js';
 import cuentasCorrientesRoutes from './routes/cuentasCorrientesRoutes.js';
 import notasCreditoRoutes from './routes/notasCreditoRoutes.js';
 import reportesRoutes from './routes/reportesRoutes.js';
+import limpiezaRoutes from './routes/limpiezaRoutes.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -86,6 +87,7 @@ app.use('/api/arca', arcaRoutes);
 app.use('/api/cuentas-corrientes', cuentasCorrientesRoutes);
 app.use('/api/notas-credito', notasCreditoRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/api/limpieza', limpiezaRoutes);
 
 // Ruta de prueba - debe funcionar incluso sin MongoDB
 app.get('/api/health', (req, res) => {
