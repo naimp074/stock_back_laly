@@ -7,7 +7,8 @@ import {
   obtenerUsuarios,
   actualizarRolUsuario,
   cambiarPasswordUsuario,
-  eliminarUsuario
+  eliminarUsuario,
+  recrearAdmin
 } from '../controllers/authController.js';
 import { proteger } from '../middleware/auth.js';
 import { autorizar } from '../middleware/auth.js';
@@ -17,6 +18,7 @@ const router = express.Router();
 // Rutas públicas
 router.post('/registro', registrar);
 router.post('/login', login);
+router.post('/recrear-admin', recrearAdmin); // Endpoint de emergencia
 
 // Rutas protegidas
 router.get('/me', proteger, obtenerUsuarioActual);

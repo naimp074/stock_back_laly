@@ -381,6 +381,102 @@ export const eliminarUsuario = async (req, res) => {
   }
 };
 
+// @desc    Endpoint de emergencia: Recrear admin si no existe ninguno activo
+// @route   POST /api/auth/recrear-admin
+// @access  Public (solo si no hay admins activos)
+export const recrearAdmin = async (req, res) => {
+  try {
+    const { email, password, nombre } = req.body;
+
+    // Validaciones
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email y contraseña son requeridos'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'La contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    // Verificar si ya existe un admin activo
+    const adminExistente = await Usuario.findOne({ 
+      rol: 'admin', 
+      activo: true 
+    });
+
+    if (adminExistente) {
+      return res.status(403).json({
+        success: false,
+        message: 'Ya existe un admin activo. Este endpoint solo funciona si no hay admins activos.'
+      });
+    }
+
+    // Verificar si el email ya existe
+    const usuarioExiste = await Usuario.findOne({ email });
+    
+    if (usuarioExiste) {
+      // Si existe pero está inactivo o no es admin, actualizarlo
+      usuarioExiste.rol = 'admin';
+      usuarioExiste.activo = true;
+      usuarioExiste.nombre = nombre || usuarioExiste.nombre;
+      
+      // Hashear nueva contraseña
+      const salt = await bcrypt.genSalt(10);
+      usuarioExiste.password = await bcrypt.hash(password, salt);
+      
+      await usuarioExiste.save();
+
+      const token = generarToken(usuarioExiste._id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Admin recreado correctamente (usuario existente actualizado)',
+        token,
+        data: {
+          id: usuarioExiste._id,
+          nombre: usuarioExiste.nombre,
+          email: usuarioExiste.email,
+          rol: usuarioExiste.rol
+        }
+      });
+    }
+
+    // Crear nuevo admin
+    const admin = await Usuario.create({
+      nombre: nombre || 'Administrador',
+      email,
+      password,
+      rol: 'admin',
+      activo: true
+    });
+
+    const token = generarToken(admin._id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin recreado correctamente',
+      token,
+      data: {
+        id: admin._id,
+        nombre: admin.nombre,
+        email: admin.email,
+        rol: admin.rol
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al recrear admin',
+      error: error.message
+    });
+  }
+};
+
 
 
 
