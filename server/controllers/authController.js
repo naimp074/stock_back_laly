@@ -246,6 +246,55 @@ export const actualizarRolUsuario = async (req, res) => {
   }
 };
 
+// @desc    Cambiar contraseña de usuario (solo admin)
+// @route   PUT /api/auth/usuarios/:id/password
+// @access  Private/Admin
+export const cambiarPasswordUsuario = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'La contraseña es requerida'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'La contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    const usuario = await Usuario.findByIdAndUpdate(
+      id,
+      { password },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Contraseña actualizada correctamente',
+      data: usuario
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al cambiar contraseña',
+      error: error.message
+    });
+  }
+};
+
 
 
 
