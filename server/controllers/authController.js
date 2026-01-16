@@ -295,6 +295,50 @@ export const cambiarPasswordUsuario = async (req, res) => {
   }
 };
 
+// @desc    Eliminar usuario (solo admin)
+// @route   DELETE /api/auth/usuarios/:id
+// @access  Private/Admin
+export const eliminarUsuario = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const usuarioActual = req.usuario;
+
+    // No permitir que un usuario se elimine a sí mismo
+    if (usuarioActual._id.toString() === id) {
+      return res.status(400).json({
+        success: false,
+        message: 'No puedes eliminar tu propio usuario'
+      });
+    }
+
+    const usuario = await Usuario.findByIdAndDelete(id);
+
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Usuario eliminado correctamente',
+      data: {
+        id: usuario._id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar usuario',
+      error: error.message
+    });
+  }
+};
+
 
 
 

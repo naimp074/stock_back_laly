@@ -6,7 +6,8 @@ import {
   actualizarPerfil,
   obtenerUsuarios,
   actualizarRolUsuario,
-  cambiarPasswordUsuario
+  cambiarPasswordUsuario,
+  eliminarUsuario
 } from '../controllers/authController.js';
 import { proteger } from '../middleware/auth.js';
 import { autorizar } from '../middleware/auth.js';
@@ -25,6 +26,7 @@ router.put('/perfil', proteger, actualizarPerfil);
 router.get('/usuarios', proteger, autorizar('admin'), obtenerUsuarios);
 router.put('/usuarios/:id/rol', proteger, autorizar('admin'), actualizarRolUsuario);
 router.put('/usuarios/:id/password', proteger, autorizar('admin'), cambiarPasswordUsuario);
+router.delete('/usuarios/:id', proteger, autorizar('admin'), eliminarUsuario);
 
 export default router;
 
