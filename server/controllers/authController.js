@@ -381,6 +381,57 @@ export const eliminarUsuario = async (req, res) => {
   }
 };
 
+// @desc    Endpoint de emergencia: Eliminar usuario por email (sin autenticación)
+// @route   DELETE /api/auth/emergencia/eliminar-usuario
+// @access  Public (con clave de emergencia)
+export const eliminarUsuarioPorEmail = async (req, res) => {
+  try {
+    const { email, clave_emergencia } = req.body;
+
+    // Clave de emergencia para seguridad básica
+    const CLAVE_EMERGENCIA = process.env.EMERGENCY_KEY || 'EMERGENCY_RESET_2024';
+
+    if (clave_emergencia !== CLAVE_EMERGENCIA) {
+      return res.status(403).json({
+        success: false,
+        message: 'Clave de emergencia inválida'
+      });
+    }
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email es requerido'
+      });
+    }
+
+    const usuario = await Usuario.findOneAndDelete({ email });
+
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Usuario eliminado correctamente',
+      data: {
+        email: usuario.email,
+        nombre: usuario.nombre,
+        rol: usuario.rol
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar usuario',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Endpoint de emergencia: Recrear admin si no existe ninguno activo
 // @route   POST /api/auth/recrear-admin
 // @access  Public (solo si no hay admins activos)

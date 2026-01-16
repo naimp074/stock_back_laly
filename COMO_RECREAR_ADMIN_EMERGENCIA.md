@@ -1,14 +1,122 @@
 # 🚨 Cómo Recrear el Admin en Caso de Emergencia
 
-Si no puedes iniciar sesión y necesitas recrear el admin, usa este endpoint de emergencia.
-
-## ⚠️ IMPORTANTE
-
-Este endpoint **solo funciona si NO hay ningún admin activo** en el sistema. Es una medida de seguridad.
+Si no puedes iniciar sesión y necesitas recrear el admin, sigue estos pasos.
 
 ---
 
-## 🔄 Opción 1: Recrear Admin (Recomendado)
+## 🔄 Solución Rápida: Borrar y Recrear Admin
+
+### Paso 1: Eliminar el Admin Actual
+
+**Request:**
+```
+DELETE https://stock-back-laly.vercel.app/api/auth/emergencia/eliminar-usuario
+```
+
+**Body (raw JSON):**
+```json
+{
+  "email": "placam20@gmail.com",
+  "clave_emergencia": "EMERGENCY_RESET_2024"
+}
+```
+
+**Respuesta exitosa:**
+```json
+{
+  "success": true,
+  "message": "Usuario eliminado correctamente",
+  "data": {
+    "email": "placam20@gmail.com",
+    "nombre": "admin",
+    "rol": "admin"
+  }
+}
+```
+
+### Paso 2: Crear Nuevo Admin
+
+**Request:**
+```
+POST https://stock-back-laly.vercel.app/api/auth/recrear-admin
+```
+
+**Body (raw JSON):**
+```json
+{
+  "email": "placam20@gmail.com",
+  "password": "nueva_password123",
+  "nombre": "Administrador"
+}
+```
+
+**Respuesta exitosa:**
+```json
+{
+  "success": true,
+  "message": "Admin recreado correctamente",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "data": {
+    "id": "...",
+    "nombre": "Administrador",
+    "email": "placam20@gmail.com",
+    "rol": "admin"
+  }
+}
+```
+
+---
+
+## 📝 Ejemplo Completo en Postman
+
+### Paso 1: Eliminar Admin
+
+1. **Método:** `DELETE`
+2. **URL:** `https://stock-back-laly.vercel.app/api/auth/emergencia/eliminar-usuario`
+3. **Body (raw JSON):**
+```json
+{
+  "email": "placam20@gmail.com",
+  "clave_emergencia": "EMERGENCY_RESET_2024"
+}
+```
+
+### Paso 2: Crear Nuevo Admin
+
+1. **Método:** `POST`
+2. **URL:** `https://stock-back-laly.vercel.app/api/auth/recrear-admin`
+3. **Body (raw JSON):**
+```json
+{
+  "email": "placam20@gmail.com",
+  "password": "nueva_password_segura123",
+  "nombre": "Administrador"
+}
+```
+
+### Paso 3: Verificar Login
+
+1. **Método:** `POST`
+2. **URL:** `https://stock-back-laly.vercel.app/api/auth/login`
+3. **Body:**
+```json
+{
+  "email": "placam20@gmail.com",
+  "password": "nueva_password_segura123"
+}
+```
+
+---
+
+## ⚠️ IMPORTANTE
+
+- **Clave de emergencia:** `EMERGENCY_RESET_2024` (por defecto)
+- Puedes cambiar esta clave configurando la variable de entorno `EMERGENCY_KEY` en Vercel
+- Este endpoint es público, úsalo solo en emergencias
+
+---
+
+## 🔄 Opción Alternativa: Recrear Admin Directamente
 
 Este endpoint crea un nuevo admin o actualiza uno existente si no hay admins activos:
 

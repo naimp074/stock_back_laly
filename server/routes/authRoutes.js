@@ -8,7 +8,8 @@ import {
   actualizarRolUsuario,
   cambiarPasswordUsuario,
   eliminarUsuario,
-  recrearAdmin
+  recrearAdmin,
+  eliminarUsuarioPorEmail
 } from '../controllers/authController.js';
 import { proteger } from '../middleware/auth.js';
 import { autorizar } from '../middleware/auth.js';
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post('/registro', registrar);
 router.post('/login', login);
 router.post('/recrear-admin', recrearAdmin); // Endpoint de emergencia
+router.delete('/emergencia/eliminar-usuario', eliminarUsuarioPorEmail); // Endpoint de emergencia
 
 // Rutas protegidas
 router.get('/me', proteger, obtenerUsuarioActual);
