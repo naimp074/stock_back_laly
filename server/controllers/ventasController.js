@@ -6,10 +6,10 @@ import Producto from '../models/Producto.js';
 // @access  Private
 export const obtenerVentas = async (req, res) => {
   try {
-    const user_id = req.user_id;
     const { limit = 50 } = req.query;
 
-    const ventas = await Venta.find({ user_id })
+    // Todos los usuarios ven todas las ventas
+    const ventas = await Venta.find({})
       .sort({ fecha: -1 })
       .limit(Number(limit));
 
@@ -33,9 +33,9 @@ export const obtenerVentas = async (req, res) => {
 export const obtenerVenta = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const venta = await Venta.findOne({ _id: id, user_id });
+    // Todos los usuarios pueden ver cualquier venta
+    const venta = await Venta.findById(id);
 
     if (!venta) {
       return res.status(404).json({
@@ -89,14 +89,11 @@ export const crearVenta = async (req, res) => {
       user_id
     });
 
-    // Descontar stock de productos
+    // Descontar stock de productos (buscar en todos los productos, sin filtrar por user_id)
     for (const item of items) {
       if (!item.id) continue;
 
-      const producto = await Producto.findOne({ 
-        _id: item.id, 
-        user_id 
-      });
+      const producto = await Producto.findById(item.id);
 
       if (producto) {
         const cantVendida = Number(item.cantidad || 0);
@@ -127,11 +124,11 @@ export const crearVenta = async (req, res) => {
 export const actualizarVenta = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
     const { ...ventaData } = req.body;
 
-    const venta = await Venta.findOneAndUpdate(
-      { _id: id, user_id },
+    // Todos los usuarios pueden actualizar cualquier venta
+    const venta = await Venta.findByIdAndUpdate(
+      id,
       ventaData,
       { new: true, runValidators: true }
     );
@@ -162,9 +159,9 @@ export const actualizarVenta = async (req, res) => {
 export const eliminarVenta = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const venta = await Venta.findOneAndDelete({ _id: id, user_id });
+    // Todos los usuarios pueden eliminar cualquier venta
+    const venta = await Venta.findByIdAndDelete(id);
 
     if (!venta) {
       return res.status(404).json({
@@ -192,10 +189,8 @@ export const eliminarVenta = async (req, res) => {
 // @access  Private
 export const obtenerSiguienteNumeroFactura = async (req, res) => {
   try {
-    const user_id = req.user_id;
-
+    // Buscar en todas las ventas para obtener el siguiente número global
     const ultimaVenta = await Venta.findOne({ 
-      user_id, 
       numero_factura: { $ne: null } 
     })
       .sort({ numero_factura: -1 })

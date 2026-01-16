@@ -7,9 +7,8 @@ import Venta from '../models/Venta.js';
 // @access  Private
 export const obtenerCuentas = async (req, res) => {
   try {
-    const user_id = req.user_id;
-
-    const cuentas = await CuentaCorriente.find({ user_id })
+    // Todos los usuarios ven todas las cuentas corrientes
+    const cuentas = await CuentaCorriente.find({})
       .sort({ createdAt: -1 });
 
     // Calcular saldos
@@ -51,9 +50,9 @@ export const obtenerCuentas = async (req, res) => {
 export const obtenerCuenta = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const cuenta = await CuentaCorriente.findOne({ _id: id, user_id });
+    // Todos los usuarios pueden ver cualquier cuenta corriente
+    const cuenta = await CuentaCorriente.findById(id);
 
     if (!cuenta) {
       return res.status(404).json({
@@ -125,11 +124,11 @@ export const crearCuenta = async (req, res) => {
 export const actualizarCuenta = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
     const { ...cuentaData } = req.body;
 
-    const cuenta = await CuentaCorriente.findOneAndUpdate(
-      { _id: id, user_id },
+    // Todos los usuarios pueden actualizar cualquier cuenta corriente
+    const cuenta = await CuentaCorriente.findByIdAndUpdate(
+      id,
       cuentaData,
       { new: true, runValidators: true }
     );
@@ -160,9 +159,9 @@ export const actualizarCuenta = async (req, res) => {
 export const eliminarCuenta = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const cuenta = await CuentaCorriente.findOneAndDelete({ _id: id, user_id });
+    // Todos los usuarios pueden eliminar cualquier cuenta corriente
+    const cuenta = await CuentaCorriente.findByIdAndDelete(id);
 
     if (!cuenta) {
       return res.status(404).json({
@@ -198,11 +197,10 @@ export const eliminarCuenta = async (req, res) => {
 export const obtenerMovimientos = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
     const { limit = 100 } = req.query;
 
-    // Verificar que la cuenta existe y pertenece al usuario
-    const cuenta = await CuentaCorriente.findOne({ _id: id, user_id });
+    // Verificar que la cuenta existe (sin filtrar por usuario)
+    const cuenta = await CuentaCorriente.findById(id);
     if (!cuenta) {
       return res.status(404).json({
         success: false,
@@ -210,7 +208,8 @@ export const obtenerMovimientos = async (req, res) => {
       });
     }
 
-    const movimientos = await PagoCorriente.find({ cuenta_id: id, user_id })
+    // Todos los usuarios pueden ver los movimientos de cualquier cuenta
+    const movimientos = await PagoCorriente.find({ cuenta_id: id })
       .sort({ fecha: -1 })
       .limit(Number(limit));
 
@@ -251,8 +250,8 @@ export const registrarMovimiento = async (req, res) => {
       });
     }
 
-    // Verificar que la cuenta existe
-    const cuenta = await CuentaCorriente.findOne({ _id: id, user_id });
+    // Verificar que la cuenta existe (sin filtrar por usuario)
+    const cuenta = await CuentaCorriente.findById(id);
     if (!cuenta) {
       return res.status(404).json({
         success: false,
@@ -260,11 +259,10 @@ export const registrarMovimiento = async (req, res) => {
       });
     }
 
-    // Obtener siguiente número de factura si no se proporciona
+    // Obtener siguiente número de factura si no se proporciona (buscar en todas las ventas)
     let numeroFacturaFinal = numeroFactura || factura;
     if (!numeroFacturaFinal) {
       const ultimaVenta = await Venta.findOne({ 
-        user_id, 
         numero_factura: { $ne: null } 
       })
         .sort({ numero_factura: -1 })
@@ -337,11 +335,11 @@ export const registrarMovimiento = async (req, res) => {
 export const actualizarMovimiento = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
     const { ...movimientoData } = req.body;
 
-    const movimiento = await PagoCorriente.findOneAndUpdate(
-      { _id: id, user_id },
+    // Todos los usuarios pueden actualizar cualquier movimiento
+    const movimiento = await PagoCorriente.findByIdAndUpdate(
+      id,
       movimientoData,
       { new: true, runValidators: true }
     );
@@ -380,9 +378,9 @@ export const actualizarMovimiento = async (req, res) => {
 export const eliminarMovimiento = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const movimiento = await PagoCorriente.findOne({ _id: id, user_id });
+    // Todos los usuarios pueden eliminar cualquier movimiento
+    const movimiento = await PagoCorriente.findById(id);
     if (!movimiento) {
       return res.status(404).json({
         success: false,

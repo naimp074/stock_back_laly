@@ -5,9 +5,8 @@ import Producto from '../models/Producto.js';
 // @access  Private
 export const obtenerProductos = async (req, res) => {
   try {
-    const user_id = req.user_id;
-
-    const productos = await Producto.find({ user_id })
+    // Todos los usuarios ven todos los productos
+    const productos = await Producto.find({})
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -30,9 +29,9 @@ export const obtenerProductos = async (req, res) => {
 export const obtenerProducto = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const producto = await Producto.findOne({ _id: id, user_id });
+    // Todos los usuarios pueden ver cualquier producto
+    const producto = await Producto.findById(id);
 
     if (!producto) {
       return res.status(404).json({
@@ -95,11 +94,11 @@ export const crearProducto = async (req, res) => {
 export const actualizarProducto = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
     const { ...productoData } = req.body;
 
-    const producto = await Producto.findOneAndUpdate(
-      { _id: id, user_id },
+    // Todos los usuarios pueden actualizar cualquier producto
+    const producto = await Producto.findByIdAndUpdate(
+      id,
       productoData,
       { new: true, runValidators: true }
     );
@@ -130,9 +129,9 @@ export const actualizarProducto = async (req, res) => {
 export const eliminarProducto = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const producto = await Producto.findOneAndDelete({ _id: id, user_id });
+    // Todos los usuarios pueden eliminar cualquier producto
+    const producto = await Producto.findByIdAndDelete(id);
 
     if (!producto) {
       return res.status(404).json({

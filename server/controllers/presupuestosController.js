@@ -5,10 +5,10 @@ import Presupuesto from '../models/Presupuesto.js';
 // @access  Private
 export const obtenerPresupuestos = async (req, res) => {
   try {
-    const user_id = req.user_id;
     const { limit = 50 } = req.query;
 
-    const presupuestos = await Presupuesto.find({ user_id })
+    // Todos los usuarios ven todos los presupuestos
+    const presupuestos = await Presupuesto.find({})
       .sort({ fecha: -1 })
       .limit(Number(limit));
 
@@ -32,9 +32,9 @@ export const obtenerPresupuestos = async (req, res) => {
 export const obtenerPresupuesto = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const presupuesto = await Presupuesto.findOne({ _id: id, user_id });
+    // Todos los usuarios pueden ver cualquier presupuesto
+    const presupuesto = await Presupuesto.findById(id);
 
     if (!presupuesto) {
       return res.status(404).json({
@@ -114,11 +114,11 @@ export const crearPresupuesto = async (req, res) => {
 export const actualizarPresupuesto = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
     const { ...presupuestoData } = req.body;
 
-    const presupuesto = await Presupuesto.findOneAndUpdate(
-      { _id: id, user_id },
+    // Todos los usuarios pueden actualizar cualquier presupuesto
+    const presupuesto = await Presupuesto.findByIdAndUpdate(
+      id,
       presupuestoData,
       { new: true, runValidators: true }
     );
@@ -149,9 +149,9 @@ export const actualizarPresupuesto = async (req, res) => {
 export const eliminarPresupuesto = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const presupuesto = await Presupuesto.findOneAndDelete({ _id: id, user_id });
+    // Todos los usuarios pueden eliminar cualquier presupuesto
+    const presupuesto = await Presupuesto.findByIdAndDelete(id);
 
     if (!presupuesto) {
       return res.status(404).json({
@@ -179,10 +179,8 @@ export const eliminarPresupuesto = async (req, res) => {
 // @access  Private
 export const obtenerSiguienteNumeroPresupuesto = async (req, res) => {
   try {
-    const user_id = req.user_id;
-
+    // Buscar en todos los presupuestos para obtener el siguiente número global
     const ultimoPresupuesto = await Presupuesto.findOne({ 
-      user_id, 
       numero_presupuesto: { $ne: null } 
     })
       .sort({ numero_presupuesto: -1 })

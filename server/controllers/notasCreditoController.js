@@ -7,10 +7,10 @@ import Venta from '../models/Venta.js';
 // @access  Private
 export const obtenerNotasCredito = async (req, res) => {
   try {
-    const user_id = req.user_id;
     const { limit = 50 } = req.query;
 
-    const notas = await NotaCredito.find({ user_id })
+    // Todos los usuarios ven todas las notas de crédito
+    const notas = await NotaCredito.find({})
       .sort({ fecha: -1 })
       .limit(Number(limit));
 
@@ -34,9 +34,9 @@ export const obtenerNotasCredito = async (req, res) => {
 export const obtenerNotaCredito = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const nota = await NotaCredito.findOne({ _id: id, user_id });
+    // Todos los usuarios pueden ver cualquier nota de crédito
+    const nota = await NotaCredito.findById(id);
 
     if (!nota) {
       return res.status(404).json({
@@ -81,8 +81,8 @@ export const crearNotaCredito = async (req, res) => {
       });
     }
 
-    // Generar número de nota de crédito
-    const ultimaNota = await NotaCredito.findOne({ user_id })
+    // Generar número de nota de crédito (buscar en todas las notas)
+    const ultimaNota = await NotaCredito.findOne({})
       .sort({ numero_nota: -1 })
       .select('numero_nota');
     
@@ -104,15 +104,12 @@ export const crearNotaCredito = async (req, res) => {
       user_id
     });
 
-    // Devolver stock de productos si hay items
+    // Devolver stock de productos si hay items (buscar en todos los productos, sin filtrar por user_id)
     if (items && Array.isArray(items) && items.length > 0) {
       for (const item of items) {
         if (!item.id || !item.cantidad) continue;
 
-        const producto = await Producto.findOne({ 
-          _id: item.id, 
-          user_id 
-        });
+        const producto = await Producto.findById(item.id);
 
         if (producto) {
           const stockActual = Number(producto.cantidad || 0);
@@ -145,11 +142,11 @@ export const crearNotaCredito = async (req, res) => {
 export const actualizarNotaCredito = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
     const { ...notaData } = req.body;
 
-    const nota = await NotaCredito.findOneAndUpdate(
-      { _id: id, user_id },
+    // Todos los usuarios pueden actualizar cualquier nota de crédito
+    const nota = await NotaCredito.findByIdAndUpdate(
+      id,
       notaData,
       { new: true, runValidators: true }
     );
@@ -180,9 +177,9 @@ export const actualizarNotaCredito = async (req, res) => {
 export const eliminarNotaCredito = async (req, res) => {
   try {
     const { id } = req.params;
-    const user_id = req.user_id;
 
-    const nota = await NotaCredito.findOneAndDelete({ _id: id, user_id });
+    // Todos los usuarios pueden eliminar cualquier nota de crédito
+    const nota = await NotaCredito.findByIdAndDelete(id);
 
     if (!nota) {
       return res.status(404).json({
@@ -210,16 +207,15 @@ export const eliminarNotaCredito = async (req, res) => {
 // @access  Private
 export const obtenerVentasParaNotaCredito = async (req, res) => {
   try {
-    const user_id = req.user_id;
     const { limit = 100 } = req.query;
 
-    // Obtener todas las ventas
-    const todasLasVentas = await Venta.find({ user_id })
+    // Obtener todas las ventas (sin filtrar por usuario)
+    const todasLasVentas = await Venta.find({})
       .sort({ fecha: -1 })
       .limit(Number(limit));
 
-    // Obtener notas de crédito existentes para filtrar ventas ya procesadas
-    const notasCredito = await NotaCredito.find({ user_id });
+    // Obtener notas de crédito existentes para filtrar ventas ya procesadas (sin filtrar por usuario)
+    const notasCredito = await NotaCredito.find({});
     const ventasConNotaCredito = new Set(
       notasCredito
         .map(nota => nota.venta_original_id?.toString())
@@ -250,9 +246,8 @@ export const obtenerVentasParaNotaCredito = async (req, res) => {
 // @access  Private
 export const obtenerEstadisticasNotasCredito = async (req, res) => {
   try {
-    const user_id = req.user_id;
-
-    const notas = await NotaCredito.find({ user_id });
+    // Todos los usuarios ven estadísticas de todas las notas de crédito
+    const notas = await NotaCredito.find({});
 
     const hoy = new Date();
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
