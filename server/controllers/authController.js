@@ -103,7 +103,26 @@ export const login = async (req, res) => {
       });
     }
 
-    const passwordCorrecto = await usuario.compararPassword(password);
+    // Intentar comparar password
+    let passwordCorrecto = false;
+    
+    // Verificar si la contraseña está hasheada (empieza con $2a$ o $2b$)
+    const passwordEstaHasheada = usuario.password && usuario.password.startsWith('$2');
+    
+    if (passwordEstaHasheada) {
+      // Contraseña hasheada, usar comparación normal
+      passwordCorrecto = await usuario.compararPassword(password);
+    } else {
+      // Contraseña en texto plano (bug anterior), comparar directamente
+      passwordCorrecto = usuario.password === password;
+      
+      // Si coincide, re-hashear la contraseña automáticamente
+      if (passwordCorrecto) {
+        const salt = await bcrypt.genSalt(10);
+        usuario.password = await bcrypt.hash(password, salt);
+        await usuario.save();
+      }
+    }
 
     if (!passwordCorrecto) {
       return res.status(401).json({
