@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import Usuario from '../models/Usuario.js';
 
 // Generar JWT Token
@@ -159,17 +160,32 @@ export const obtenerUsuarioActual = async (req, res) => {
 export const actualizarPerfil = async (req, res) => {
   try {
     const { nombre, email, password } = req.body;
-    const camposActualizar = {};
+    
+    // Obtener el usuario actual
+    const usuario = await Usuario.findById(req.usuario._id);
+    
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
 
-    if (nombre) camposActualizar.nombre = nombre;
-    if (email) camposActualizar.email = email;
-    if (password) camposActualizar.password = password;
+    // Actualizar campos
+    if (nombre) usuario.nombre = nombre;
+    if (email) usuario.email = email;
+    
+    // Si hay password, hashearlo antes de guardar
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      usuario.password = await bcrypt.hash(password, salt);
+    }
 
-    const usuario = await Usuario.findByIdAndUpdate(
-      req.usuario._id,
-      camposActualizar,
-      { new: true, runValidators: true }
-    );
+    // Guardar usando save() para que se ejecuten los hooks
+    await usuario.save();
+
+    // Ocultar password en la respuesta
+    usuario.password = undefined;
 
     res.status(200).json({
       success: true,
@@ -268,11 +284,8 @@ export const cambiarPasswordUsuario = async (req, res) => {
       });
     }
 
-    const usuario = await Usuario.findByIdAndUpdate(
-      id,
-      { password },
-      { new: true, runValidators: true }
-    ).select('-password');
+    // Obtener el usuario
+    const usuario = await Usuario.findById(id);
 
     if (!usuario) {
       return res.status(404).json({
@@ -280,6 +293,16 @@ export const cambiarPasswordUsuario = async (req, res) => {
         message: 'Usuario no encontrado'
       });
     }
+
+    // Hashear la contraseña antes de guardar
+    const salt = await bcrypt.genSalt(10);
+    usuario.password = await bcrypt.hash(password, salt);
+
+    // Guardar usando save() para que se ejecuten los hooks
+    await usuario.save();
+
+    // Ocultar password en la respuesta
+    usuario.password = undefined;
 
     res.status(200).json({
       success: true,
