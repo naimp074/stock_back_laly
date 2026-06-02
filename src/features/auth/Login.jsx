@@ -40,12 +40,12 @@ export default function Login() {
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Contraseña</Form.Label>
-            <Form.Control type="password" value={password} onChange={e=>setPassword(e.target.value)} required />
+            <Form.Control type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={6} />
           </Form.Group>
           <Button type="submit" disabled={loading} className="w-100 w-md-auto">{loading ? 'Ingresando…' : 'Ingresar'}</Button>
         </Form>
         <div className="mt-3 text-muted text-center text-md-start" style={{fontSize:12}}>
-          Ingresá cualquier email y contraseña para comenzar (se crearán automáticamente)
+          Ingresá tu email y contraseña (mínimo 6 caracteres). Si es tu primer acceso, se creará la cuenta automáticamente.
         </div>
       </Card>
     </Container>
